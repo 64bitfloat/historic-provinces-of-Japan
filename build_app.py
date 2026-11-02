@@ -133,19 +133,6 @@ raw_html = '''<!DOCTYPE html>
       background: #334155;
       border-radius: 3px;
     }
-    .leaflet-tooltip.prov-tooltip {
-      background: rgba(15, 23, 42, 0.92);
-      border: 1px solid #38bdf8;
-      border-radius: 6px;
-      color: #f1f5f9;
-      font-weight: 700;
-      font-size: 13px;
-      padding: 4px 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    }
-    .leaflet-tooltip-top:before {
-      border-top-color: #38bdf8 !important;
-    }
   </style>
 </head>
 <body class="h-full flex flex-col overflow-hidden bg-slate-950 select-none">
@@ -827,12 +814,6 @@ raw_html = '''<!DOCTYPE html>
             mouseover: (e) => onPolygonHover(e, p.code),
             mouseout: (e) => onPolygonOut(e, p.code),
             click: () => onPolygonClick(p.code)
-          });
-
-          layer.bindTooltip(p.name + '（' + p.kana + '）', {
-            className: 'prov-tooltip',
-            direction: 'top',
-            sticky: true
           });
         }
       }).addTo(state.map);
