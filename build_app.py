@@ -406,23 +406,39 @@ raw_html = '''<!DOCTYPE html>
       </div>
 
       <!-- 成績カード -->
-      <div class="bg-slate-800/90 border border-slate-700/80 rounded-xl p-4 grid grid-cols-2 gap-3 text-left shadow-inner">
-        <div>
-          <div class="text-[11px] text-slate-400">今回の出題数</div>
-          <div class="text-base sm:text-lg font-bold text-white mt-0.5">
-            <span id="complete-modal-total-questions">15</span> <span class="text-xs font-normal text-slate-400">国</span>
+      <div class="bg-slate-800/90 border border-slate-700/80 rounded-xl p-4 space-y-2.5 text-left shadow-inner">
+        <!-- 今回の周回スコア（メイン） -->
+        <div class="bg-slate-900/90 border border-sky-500/30 rounded-xl p-3 flex items-center justify-between gap-3">
+          <div>
+            <div class="text-[11px] text-sky-400 font-bold flex items-center gap-1">
+              <span>🎯 今回の周回スコア</span>
+            </div>
+            <div class="text-xl sm:text-2xl font-black text-white mt-1">
+              <span id="complete-modal-round-correct" class="text-emerald-400 text-2xl sm:text-3xl">0</span>
+              <span class="text-sm font-semibold text-slate-400">/ <span id="complete-modal-round-total">0</span> 問 正解</span>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-[11px] text-slate-400 font-semibold">正答率</div>
+            <div class="text-xl sm:text-2xl font-black text-sky-400 mt-1" id="complete-modal-round-pct">
+              0.0%
+            </div>
           </div>
         </div>
-        <div>
-          <div class="text-[11px] text-slate-400">地域の制覇状況</div>
-          <div class="text-base sm:text-lg font-bold text-emerald-400 mt-0.5">
-            <span id="complete-modal-region-cleared">15</span> <span class="text-xs font-normal text-slate-400">/ <span id="complete-modal-region-total">15</span></span>
+
+        <!-- 累計制覇状況（サブ情報） -->
+        <div class="grid grid-cols-2 gap-2 text-xs pt-0.5">
+          <div class="bg-slate-900/50 rounded-lg p-2.5 border border-slate-800">
+            <div class="text-[10px] text-slate-400">地域の累計制覇</div>
+            <div class="text-sm font-bold text-slate-200 mt-0.5">
+              <span id="complete-modal-region-cleared" class="text-emerald-400">0</span> / <span id="complete-modal-region-total">0</span> 国
+            </div>
           </div>
-        </div>
-        <div class="col-span-2 pt-2 border-t border-slate-700/60 flex items-center justify-between">
-          <div class="text-[11px] text-slate-400">全国制覇数:</div>
-          <div class="text-xs font-bold text-sky-300">
-            <span id="complete-modal-total-cleared">0</span> / 68 国 (<span id="complete-modal-total-pct">0.0%</span>)
+          <div class="bg-slate-900/50 rounded-lg p-2.5 border border-slate-800">
+            <div class="text-[10px] text-slate-400">全国の累計制覇</div>
+            <div class="text-sm font-bold text-slate-200 mt-0.5">
+              <span id="complete-modal-total-cleared" class="text-sky-300">0</span> / 68 国
+            </div>
           </div>
         </div>
       </div>
@@ -678,6 +694,8 @@ raw_html = '''<!DOCTYPE html>
       provLayerMap: {}, // code -> [layer]
       isAnswering: false,
       feedbackTimer: null,
+      roundCorrect: 0, // 現在の周回での正解数
+      roundTotal: 0,   // 現在の周回での回答数
     };
 
     /* ========================================================
@@ -845,6 +863,8 @@ raw_html = '''<!DOCTYPE html>
       state.selectedDoh = dohFilter;
       state.selectedLevel = initialLevel;
       state.currentScreen = 'spoke';
+      state.roundCorrect = 0;
+      state.roundTotal = 0;
 
       document.getElementById('screen-hub').classList.add('hidden');
       document.getElementById('screen-spoke').classList.remove('hidden');
@@ -1096,6 +1116,8 @@ raw_html = '''<!DOCTYPE html>
       resetAllHighlights();
       clearTimeout(state.feedbackTimer);
       state.isAnswering = false;
+      state.roundCorrect = 0;
+      state.roundTotal = 0;
 
       document.getElementById('panel-locate').classList.add('hidden');
       document.getElementById('panel-name').classList.add('hidden');
@@ -1128,6 +1150,8 @@ raw_html = '''<!DOCTYPE html>
        ======================================================== */
     function loadLevelDeck(levelStr) {
       state.selectedLevel = levelStr;
+      state.roundCorrect = 0;
+      state.roundTotal = 0;
       let pool = state.selectedDoh === 'ALL' ? [...PROV_LIST] : PROV_LIST.filter(p => p.doh === state.selectedDoh);
 
       if (levelStr === 'WEAK') {
@@ -1203,8 +1227,14 @@ raw_html = '''<!DOCTYPE html>
 
       document.getElementById('complete-modal-subtitle').textContent = dohTitle + '（' + lvlName + '）全問終了！';
 
-      const totalQ = state.activeQuestionList.length;
-      document.getElementById('complete-modal-total-questions').textContent = totalQ;
+      // 今回の周回スコア
+      const roundTot = state.roundTotal > 0 ? state.roundTotal : state.activeQuestionList.length;
+      const roundCorr = state.roundCorrect;
+      const roundPct = roundTot > 0 ? ((roundCorr / roundTot) * 100).toFixed(1) : '0.0';
+
+      document.getElementById('complete-modal-round-correct').textContent = roundCorr;
+      document.getElementById('complete-modal-round-total').textContent = roundTot;
+      document.getElementById('complete-modal-round-pct').textContent = roundPct + '%';
 
       // 地域の制覇状況
       const regProvs = state.selectedDoh === 'ALL' ? PROV_LIST : PROV_LIST.filter(p => p.doh === state.selectedDoh);
@@ -1212,11 +1242,9 @@ raw_html = '''<!DOCTYPE html>
       document.getElementById('complete-modal-region-cleared').textContent = regCleared;
       document.getElementById('complete-modal-region-total').textContent = regProvs.length;
 
-      // 全国制覇数
+      // 全国の累計制覇数
       const totalCleared = Store.getTotalCleared();
-      const totalPct = ((totalCleared / 68) * 100).toFixed(1);
       document.getElementById('complete-modal-total-cleared').textContent = totalCleared;
-      document.getElementById('complete-modal-total-pct').textContent = totalPct + '%';
 
       // 次の難易度ラベル
       const nextBtnLabel = document.getElementById('complete-next-level-label');
@@ -1325,6 +1353,11 @@ raw_html = '''<!DOCTYPE html>
     };
 
     function showFeedback(isCorrect, target, clickedCode = null) {
+      state.roundTotal++;
+      if (isCorrect) {
+        state.roundCorrect++;
+      }
+
       const bar = document.getElementById('feedback-bar');
       const content = document.getElementById('feedback-content');
       bar.classList.remove('hidden', 'bg-emerald-950/80', 'border-emerald-500/50', 'bg-rose-950/80', 'border-rose-500/50');
@@ -1452,6 +1485,8 @@ raw_html = '''<!DOCTYPE html>
     document.getElementById('btn-complete-retry').onclick = () => {
       hideStageCompleteModal();
       state.currentIndex = 0;
+      state.roundCorrect = 0;
+      state.roundTotal = 0;
       state.activeQuestionList.sort(() => Math.random() - 0.5);
       renderCurrentQuestion();
     };
