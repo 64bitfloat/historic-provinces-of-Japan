@@ -386,8 +386,8 @@ raw_html = '''<!DOCTYPE html>
   <!-- ========================================== -->
   <!-- 全問完了モーダル (Stage Complete Popup) -->
   <!-- ========================================== -->
-  <div id="modal-stage-complete" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-    <div class="bg-gradient-to-b from-slate-900 to-slate-950 border border-sky-500/40 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 text-center relative overflow-hidden">
+  <div id="modal-stage-complete" class="hidden fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+    <div class="bg-slate-900 border border-sky-500/50 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 text-center relative overflow-hidden">
       <!-- 装飾用背景グロー -->
       <div class="absolute -top-16 -left-16 w-36 h-36 bg-sky-500/15 rounded-full blur-3xl pointer-events-none"></div>
       <div class="absolute -bottom-16 -right-16 w-36 h-36 bg-amber-500/15 rounded-full blur-3xl pointer-events-none"></div>
@@ -406,7 +406,7 @@ raw_html = '''<!DOCTYPE html>
       </div>
 
       <!-- 成績カード -->
-      <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-4 grid grid-cols-2 gap-3 text-left">
+      <div class="bg-slate-800/90 border border-slate-700/80 rounded-xl p-4 grid grid-cols-2 gap-3 text-left shadow-inner">
         <div>
           <div class="text-[11px] text-slate-400">今回の出題数</div>
           <div class="text-base sm:text-lg font-bold text-white mt-0.5">
@@ -429,7 +429,7 @@ raw_html = '''<!DOCTYPE html>
 
       <!-- アクションボタン -->
       <div class="space-y-2 pt-1">
-        <button id="btn-complete-retry" class="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm transition shadow-lg shadow-sky-600/20 active:scale-98 flex items-center justify-center gap-2">
+        <button id="btn-complete-retry" class="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm transition shadow-lg shadow-sky-600/25 active:scale-98 flex items-center justify-center gap-2">
           <span>🔄 もう一度特訓する（シャッフル）</span>
         </button>
         <button id="btn-complete-next-level" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-sm transition border border-slate-700 active:scale-98 flex items-center justify-center gap-2">
@@ -445,7 +445,7 @@ raw_html = '''<!DOCTYPE html>
   <!-- ========================================== -->
   <!-- ヘルプモーダル -->
   <!-- ========================================== -->
-  <div id="modal-help" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+  <div id="modal-help" class="hidden fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-5 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <h3 class="text-base font-bold text-white flex items-center gap-2">
@@ -495,7 +495,7 @@ raw_html = '''<!DOCTYPE html>
   <!-- ========================================== -->
   <!-- トースト通知 -->
   <!-- ========================================== -->
-  <div id="toast" class="hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-slate-900 border border-slate-700 text-white text-xs sm:text-sm px-4 py-2 rounded-xl shadow-2xl pointer-events-none transition-all"></div>
+  <div id="toast" class="hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-[10000] bg-slate-900 border border-slate-700 text-white text-xs sm:text-sm px-4 py-2 rounded-xl shadow-2xl pointer-events-none transition-all"></div>
 
   <!-- ========================================== -->
   <!-- アプリケーションスクリプト -->
