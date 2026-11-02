@@ -460,7 +460,7 @@ raw_html = '''<!DOCTYPE html>
        ======================================================== */
     const GEOJSON_DATA = __GEOJSON_PLACEHOLDER__;
     const PROVINCES = __MASTER_PLACEHOLDER__;
-    const DOH_MASTER = __DOH_PLACEHOLDER__;
+    const DOH_LIST = __DOH_PLACEHOLDER__;
 
     const PROV_LIST = Object.values(PROVINCES);
 
