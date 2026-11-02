@@ -787,6 +787,63 @@ raw_html = '''<!DOCTYPE html>
       loadLevelDeck(state.selectedLevel);
     }
 
+    /* ========================================================
+       出題対象判定 & ポリゴンスタイル（出題範囲外グレーアウト）
+       ======================================================== */
+    function isProvTargetInCurrentStage(code) {
+      const p = PROVINCES[code];
+      if (!p) return false;
+      // 選択中の地域（五畿七道）に含まれない場合は対象外
+      if (state.selectedDoh !== 'ALL' && p.doh !== state.selectedDoh) {
+        return false;
+      }
+      // 探索モード または 'ALL' の場合はすべて対象
+      if (state.currentMode === 'explore' || state.selectedLevel === 'ALL') {
+        return true;
+      }
+      // 苦手復習（WEAK）の場合
+      if (state.selectedLevel === 'WEAK') {
+        const weakList = Store.getWeakList(state.selectedDoh);
+        return weakList.some(w => w.code === code);
+      }
+      // Level 1〜4 の場合
+      return p.lvl === parseInt(state.selectedLevel, 10);
+    }
+
+    function getProvNormalStyle(code) {
+      const isTarget = isProvTargetInCurrentStage(code);
+      if (!isTarget) {
+        // 出題範囲外: 暗いグレーアウト（背景に沈む半透明スレート）
+        return {
+          fillColor: '#1e293b',
+          fillOpacity: 0.35,
+          color: '#334155',
+          weight: 1.0,
+          opacity: 0.45
+        };
+      }
+      // 出題範囲内: 白地図スタイル（清潔な白〜明灰でくっきり浮き立つ）
+      return {
+        fillColor: '#e2e8f0',
+        fillOpacity: 0.92,
+        color: '#475569',
+        weight: 1.5,
+        opacity: 1
+      };
+    }
+
+    function updateAllPolygonStyles() {
+      Object.keys(state.provLayerMap).forEach(code => {
+        const layers = state.provLayerMap[code];
+        if (!layers) return;
+        const style = getProvNormalStyle(code);
+        layers.forEach(l => {
+          if (l._path) l._path.classList.remove('polygon-pulse');
+          l.setStyle(style);
+        });
+      });
+    }
+
     function initMap() {
       state.map = L.map('map', {
         center: [36.5, 138.0],
@@ -802,7 +859,7 @@ raw_html = '''<!DOCTYPE html>
       // GeoJSON レイヤー描画
       state.provLayerMap = {};
       state.geoJsonLayer = L.geoJSON(GEOJSON_DATA, {
-        style: defaultStyle,
+        style: (feature) => getProvNormalStyle(feature.properties.code),
         onEachFeature: (feature, layer) => {
           const p = feature.properties;
           if (!state.provLayerMap[p.code]) {
@@ -821,16 +878,6 @@ raw_html = '''<!DOCTYPE html>
       fitTargetBounds();
     }
 
-    function defaultStyle(feature) {
-      return {
-        fillColor: '#1e293b',
-        fillOpacity: 0.75,
-        color: '#475569',
-        weight: 1.2,
-        opacity: 0.95
-      };
-    }
-
     function highlightPolygon(code, type) {
       const layers = state.provLayerMap[code];
       if (!layers) return;
@@ -839,7 +886,7 @@ raw_html = '''<!DOCTYPE html>
         if (type === 'question') {
           l.setStyle({
             fillColor: '#facc15',
-            fillOpacity: 0.85,
+            fillOpacity: 0.88,
             color: '#eab308',
             weight: 3.5,
             opacity: 1
@@ -866,13 +913,13 @@ raw_html = '''<!DOCTYPE html>
         } else if (type === 'hover') {
           l.setStyle({
             fillColor: '#38bdf8',
-            fillOpacity: 0.65,
+            fillOpacity: 0.75,
             color: '#7dd3fc',
-            weight: 2
+            weight: 2.2
           });
         } else {
           if (l._path) l._path.classList.remove('polygon-pulse');
-          l.setStyle(defaultStyle());
+          l.setStyle(getProvNormalStyle(code));
         }
       });
     }
@@ -887,8 +934,10 @@ raw_html = '''<!DOCTYPE html>
       if (state.currentMode === 'explore') {
         highlightPolygon(code, 'hover');
       } else if (state.currentMode === 'locate' && !state.isAnswering) {
-        const layers = state.provLayerMap[code];
-        if (layers) layers.forEach(l => l.setStyle({ weight: 2.2, color: '#94a3b8' }));
+        if (isProvTargetInCurrentStage(code)) {
+          const layers = state.provLayerMap[code];
+          if (layers) layers.forEach(l => l.setStyle({ weight: 2.4, color: '#0284c7' }));
+        }
       }
     }
 
@@ -897,7 +946,7 @@ raw_html = '''<!DOCTYPE html>
         highlightPolygon(code, 'reset');
       } else if (state.currentMode === 'locate' && !state.isAnswering) {
         const layers = state.provLayerMap[code];
-        if (layers) layers.forEach(l => l.setStyle(defaultStyle()));
+        if (layers) layers.forEach(l => l.setStyle(getProvNormalStyle(code)));
       }
     }
 
@@ -970,6 +1019,8 @@ raw_html = '''<!DOCTYPE html>
       document.getElementById('feedback-bar').classList.add('hidden');
       document.getElementById('hint-bubble').classList.add('hidden');
 
+      updateAllPolygonStyles();
+
       if (newMode === 'locate') {
         document.getElementById('panel-locate').classList.remove('hidden');
         renderCurrentQuestion();
@@ -1012,6 +1063,7 @@ raw_html = '''<!DOCTYPE html>
       state.activeQuestionList = pool;
       state.currentIndex = 0;
 
+      updateAllPolygonStyles();
       renderCurrentQuestion();
     }
 
@@ -1060,6 +1112,18 @@ raw_html = '''<!DOCTYPE html>
     function onPolygonClick(clickedCode) {
       if (state.currentMode === 'explore') {
         showExploreDetails(clickedCode);
+        return;
+      }
+
+      // 4択問題・入力問題ではポリゴンクリックによる回答は受け付けない
+      if (state.currentMode === 'name' || state.currentMode === 'type') return;
+
+      // 出題範囲外の旧国をタップしたときの救済通知
+      if (!isProvTargetInCurrentStage(clickedCode)) {
+        const cp = PROVINCES[clickedCode];
+        if (cp) {
+          showToast('『' + cp.name + '』は Lv.' + cp.lvl + '（' + cp.doh + '）です（現在のLevelでは出題対象外）');
+        }
         return;
       }
 
