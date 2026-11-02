@@ -384,6 +384,65 @@ raw_html = '''<!DOCTYPE html>
   </div>
 
   <!-- ========================================== -->
+  <!-- 全問完了モーダル (Stage Complete Popup) -->
+  <!-- ========================================== -->
+  <div id="modal-stage-complete" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+    <div class="bg-gradient-to-b from-slate-900 to-slate-950 border border-sky-500/40 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 text-center relative overflow-hidden">
+      <!-- 装飾用背景グロー -->
+      <div class="absolute -top-16 -left-16 w-36 h-36 bg-sky-500/15 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-16 -right-16 w-36 h-36 bg-amber-500/15 rounded-full blur-3xl pointer-events-none"></div>
+
+      <!-- トロフィーアイコン -->
+      <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-3xl shadow-xl shadow-amber-500/25">
+        🏆
+      </div>
+
+      <!-- タイトル -->
+      <div>
+        <h3 class="text-xl font-black text-white flex items-center justify-center gap-1.5">
+          特訓ステージクリア！
+        </h3>
+        <p id="complete-modal-subtitle" class="text-xs sm:text-sm text-sky-400 font-semibold mt-1">東海道（Level 1）全問終了！</p>
+      </div>
+
+      <!-- 成績カード -->
+      <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-4 grid grid-cols-2 gap-3 text-left">
+        <div>
+          <div class="text-[11px] text-slate-400">今回の出題数</div>
+          <div class="text-base sm:text-lg font-bold text-white mt-0.5">
+            <span id="complete-modal-total-questions">15</span> <span class="text-xs font-normal text-slate-400">国</span>
+          </div>
+        </div>
+        <div>
+          <div class="text-[11px] text-slate-400">地域の制覇状況</div>
+          <div class="text-base sm:text-lg font-bold text-emerald-400 mt-0.5">
+            <span id="complete-modal-region-cleared">15</span> <span class="text-xs font-normal text-slate-400">/ <span id="complete-modal-region-total">15</span></span>
+          </div>
+        </div>
+        <div class="col-span-2 pt-2 border-t border-slate-700/60 flex items-center justify-between">
+          <div class="text-[11px] text-slate-400">全国制覇数:</div>
+          <div class="text-xs font-bold text-sky-300">
+            <span id="complete-modal-total-cleared">0</span> / 68 国 (<span id="complete-modal-total-pct">0.0%</span>)
+          </div>
+        </div>
+      </div>
+
+      <!-- アクションボタン -->
+      <div class="space-y-2 pt-1">
+        <button id="btn-complete-retry" class="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm transition shadow-lg shadow-sky-600/20 active:scale-98 flex items-center justify-center gap-2">
+          <span>🔄 もう一度特訓する（シャッフル）</span>
+        </button>
+        <button id="btn-complete-next-level" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-sm transition border border-slate-700 active:scale-98 flex items-center justify-center gap-2">
+          <span id="complete-next-level-label">⭐ 次の難易度に進む</span>
+        </button>
+        <button id="btn-complete-hub" class="w-full py-2 rounded-xl bg-transparent hover:bg-slate-800/60 text-slate-400 hover:text-slate-200 font-semibold text-xs transition">
+          ← 地域選択（トップ）に戻る
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
   <!-- ヘルプモーダル -->
   <!-- ========================================== -->
   <div id="modal-help" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
@@ -462,12 +521,17 @@ raw_html = '''<!DOCTYPE html>
       init() {
         if (!this.ctx) {
           const AudioContext = window.AudioContext || window.webkitAudioContext;
-          this.ctx = new AudioContext();
+          if (AudioContext) {
+            try {
+              this.ctx = new AudioContext();
+            } catch(e) {}
+          }
         }
       }
       playCorrect() {
         if (!this.enabled) return;
         this.init();
+        if (!this.ctx) return;
         if (this.ctx.state === 'suspended') this.ctx.resume();
         const now = this.ctx.currentTime;
         const osc = this.ctx.createOscillator();
@@ -486,6 +550,7 @@ raw_html = '''<!DOCTYPE html>
       playWrong() {
         if (!this.enabled) return;
         this.init();
+        if (!this.ctx) return;
         if (this.ctx.state === 'suspended') this.ctx.resume();
         const now = this.ctx.currentTime;
         const osc = this.ctx.createOscillator();
@@ -499,6 +564,26 @@ raw_html = '''<!DOCTYPE html>
         gain.connect(this.ctx.destination);
         osc.start(now);
         osc.stop(now + 0.3);
+      }
+      playFanfare() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        const now = this.ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        notes.forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+          gain.gain.setValueAtTime(0.16, now + idx * 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.4);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.1);
+          osc.stop(now + idx * 0.1 + 0.45);
+        });
       }
       toggle() {
         this.enabled = !this.enabled;
@@ -1076,9 +1161,10 @@ raw_html = '''<!DOCTYPE html>
 
       if (state.activeQuestionList.length === 0) return;
 
+      // 全問終了チェック：ポップアップを表示して待機
       if (state.currentIndex >= state.activeQuestionList.length) {
-        state.currentIndex = 0;
-        state.activeQuestionList.sort(() => Math.random() - 0.5);
+        showStageCompleteModal();
+        return;
       }
 
       const target = state.activeQuestionList[state.currentIndex];
@@ -1099,6 +1185,51 @@ raw_html = '''<!DOCTYPE html>
         input.value = '';
         setTimeout(() => input.focus(), 50);
       }
+    }
+
+    /* ========================================================
+       全問完了ポップアップ制御
+       ======================================================== */
+    function showStageCompleteModal() {
+      sound.playFanfare();
+
+      const modal = document.getElementById('modal-stage-complete');
+      const dohObj = DOH_LIST.find(d => d.filter === state.selectedDoh || (state.selectedDoh === 'ALL' && d.id === 'ALL'));
+      const dohTitle = dohObj ? dohObj.name : state.selectedDoh;
+
+      let lvlName = '全難易度';
+      if (state.selectedLevel === 'WEAK') lvlName = '苦手克服';
+      else if (state.selectedLevel !== 'ALL') lvlName = 'Level ' + state.selectedLevel;
+
+      document.getElementById('complete-modal-subtitle').textContent = dohTitle + '（' + lvlName + '）全問終了！';
+
+      const totalQ = state.activeQuestionList.length;
+      document.getElementById('complete-modal-total-questions').textContent = totalQ;
+
+      // 地域の制覇状況
+      const regProvs = state.selectedDoh === 'ALL' ? PROV_LIST : PROV_LIST.filter(p => p.doh === state.selectedDoh);
+      const regCleared = state.selectedDoh === 'ALL' ? Store.getTotalCleared() : Store.getDohCleared(state.selectedDoh);
+      document.getElementById('complete-modal-region-cleared').textContent = regCleared;
+      document.getElementById('complete-modal-region-total').textContent = regProvs.length;
+
+      // 全国制覇数
+      const totalCleared = Store.getTotalCleared();
+      const totalPct = ((totalCleared / 68) * 100).toFixed(1);
+      document.getElementById('complete-modal-total-cleared').textContent = totalCleared;
+      document.getElementById('complete-modal-total-pct').textContent = totalPct + '%';
+
+      // 次の難易度ラベル
+      const nextBtnLabel = document.getElementById('complete-next-level-label');
+      if (state.selectedLevel === '1') nextBtnLabel.textContent = '⭐ Level 2 に挑戦する';
+      else if (state.selectedLevel === '2') nextBtnLabel.textContent = '⭐ Level 3 に挑戦する';
+      else if (state.selectedLevel === '3') nextBtnLabel.textContent = '⭐ Level 4 に挑戦する';
+      else nextBtnLabel.textContent = '⭐ 全難易度（ALL）に挑戦する';
+
+      modal.classList.remove('hidden');
+    }
+
+    function hideStageCompleteModal() {
+      document.getElementById('modal-stage-complete').classList.add('hidden');
     }
 
     function updateAccuracyTag() {
@@ -1309,6 +1440,7 @@ raw_html = '''<!DOCTYPE html>
 
     document.getElementById('btn-back-to-hub').onclick = () => {
       clearTimeout(state.feedbackTimer);
+      hideStageCompleteModal();
       state.currentScreen = 'hub';
       document.getElementById('screen-spoke').classList.add('hidden');
       document.getElementById('screen-hub').classList.remove('hidden');
@@ -1316,8 +1448,52 @@ raw_html = '''<!DOCTYPE html>
       renderHubCards(state.selectedDoh);
     };
 
+    // 全問完了モーダルのボタンイベント
+    document.getElementById('btn-complete-retry').onclick = () => {
+      hideStageCompleteModal();
+      state.currentIndex = 0;
+      state.activeQuestionList.sort(() => Math.random() - 0.5);
+      renderCurrentQuestion();
+    };
+
+    document.getElementById('btn-complete-next-level').onclick = () => {
+      hideStageCompleteModal();
+      let nextLvl = 'ALL';
+      if (state.selectedLevel === '1') nextLvl = '2';
+      else if (state.selectedLevel === '2') nextLvl = '3';
+      else if (state.selectedLevel === '3') nextLvl = '4';
+      else nextLvl = 'ALL';
+
+      // レベルボタンスタイル更新
+      document.querySelectorAll('.level-btn').forEach(b => {
+        const isMatch = b.dataset.level === nextLvl;
+        b.classList.toggle('bg-sky-600', isMatch);
+        b.classList.toggle('text-white', isMatch);
+        b.classList.toggle('bg-slate-800', !isMatch);
+        b.classList.toggle('text-slate-300', !isMatch);
+      });
+
+      loadLevelDeck(nextLvl);
+    };
+
+    document.getElementById('btn-complete-hub').onclick = () => {
+      hideStageCompleteModal();
+      document.getElementById('btn-back-to-hub').click();
+    };
+
     window.addEventListener('keydown', (e) => {
       if (state.currentScreen !== 'spoke') return;
+
+      // 完了モーダル表示中のEnterキー（再挑戦）
+      const completeModal = document.getElementById('modal-stage-complete');
+      if (completeModal && !completeModal.classList.contains('hidden')) {
+        if (e.key === 'Enter') {
+          document.getElementById('btn-complete-retry').click();
+        } else if (e.key === 'Escape') {
+          hideStageCompleteModal();
+        }
+        return;
+      }
 
       if (e.key === 'Enter') {
         const btnFast = document.getElementById('btn-next-fast');
